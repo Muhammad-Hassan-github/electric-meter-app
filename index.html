@@ -8,37 +8,79 @@
   <link rel="icon" href="icon-192.png" />
   <meta name="theme-color" content="#3b82f6" />
   <style>
+    /* Reset & base */
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #f0f4f8;
-      padding: 2rem; display: flex;
-      justify-content: center; min-height: 100vh;
+      padding: 1rem;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      align-items: flex-start;
     }
     .container {
-      background: white; padding: 2rem 3rem;
-      border-radius: 12px; width: 320px;
+      background: white;
+      padding: 2rem 2rem;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 360px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.1);
       text-align: center;
+      box-sizing: border-box;
     }
-    label { font-weight: bold; margin-top: 1rem; display: block; }
+    h1 {
+      margin-top: 0;
+      color: #333;
+    }
+    label {
+      font-weight: bold;
+      margin-top: 1rem;
+      display: block;
+      text-align: left;
+    }
     input, button {
-      width: 100%; margin-top: 0.5rem; padding: 0.6rem;
-      font-size: 1rem; border-radius: 6px; border: 1px solid #ccc;
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.6rem;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
     }
     button {
-      background: #3b82f6; color: white; border: none; cursor: pointer;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      cursor: pointer;
       transition: background-color 0.3s ease;
+      font-weight: 700;
     }
-    button:hover { background: #2563eb; }
+    button:hover {
+      background: #2563eb;
+    }
     pre {
-      background: #eef3fb; padding: 1rem; border-radius: 8px;
-      white-space: pre-wrap; margin-top: 1rem; text-align: left;
+      background: #eef3fb;
+      padding: 1rem;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      margin-top: 1rem;
+      text-align: left;
+      font-size: 1rem;
+      color: #222;
     }
     .success-msg {
-      color: green; font-weight: bold; margin-top: 1rem;
+      color: green;
+      font-weight: bold;
+      margin-top: 1rem;
       min-height: 1.2em;
+      text-align: left;
     }
-    hr { margin: 2rem 0; }
+    hr {
+      margin: 2rem 0;
+      border: none;
+      border-top: 1px solid #ccc;
+    }
   </style>
 </head>
 <body>
@@ -75,7 +117,9 @@
         request.onsuccess = () => resolve(request.result);
         request.onupgradeneeded = (e) => {
           const db = e.target.result;
-          db.createObjectStore(STORE_NAME);
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME);
+          }
         };
       });
     }
@@ -117,6 +161,10 @@
       }
 
       const units = current - previous;
+      if (units < 0) {
+        result.textContent = "Error: Current reading is less than previous reading.";
+        return;
+      }
 
       result.textContent = `Previous Reading: ${previous}
 Current Reading: ${current}
@@ -138,7 +186,11 @@ Units Consumed: ${units}`;
     }
 
     window.onload = async () => {
-      db = await openDB();
+      try {
+        db = await openDB();
+      } catch (err) {
+        alert("Failed to open database: " + err);
+      }
     };
   </script>
 </body>

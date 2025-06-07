@@ -1,4 +1,4 @@
-const CACHE_NAME = "meter-app-v2";
+const CACHE_NAME = "meter-app-v3";
 const urlsToCache = [
   "./",
   "./index.html",
