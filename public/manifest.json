@@ -1,6 +1,6 @@
 {
   "name": "Electric Meter Units Calculator",
-  "short_name": "MeterCalc",
+  "short_name": "Meter1",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f0f4f8",
