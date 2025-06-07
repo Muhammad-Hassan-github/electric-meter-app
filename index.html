@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Electric Meter Units Calculator</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.png" />
+  <meta name="theme-color" content="#3b82f6" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      padding: 2rem; display: flex;
+      justify-content: center; min-height: 100vh;
+    }
+    .container {
+      background: white; padding: 2rem 3rem;
+      border-radius: 12px; width: 320px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    label { font-weight: bold; margin-top: 1rem; display: block; }
+    input, button {
+      width: 100%; margin-top: 0.5rem; padding: 0.6rem;
+      font-size: 1rem; border-radius: 6px; border: 1px solid #ccc;
+    }
+    button {
+      background: #3b82f6; color: white; border: none; cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover { background: #2563eb; }
+    pre {
+      background: #eef3fb; padding: 1rem; border-radius: 8px;
+      white-space: pre-wrap; margin-top: 1rem; text-align: left;
+    }
+    .success-msg {
+      color: green; font-weight: bold; margin-top: 1rem;
+      min-height: 1.2em;
+    }
+    hr { margin: 2rem 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Units Calculator</h1>
+
+    <label for="currentReading">Enter Current Reading:</label>
+    <input type="number" id="currentReading" placeholder="e.g. 12345" />
+
+    <button onclick="calculateUnits()">Calculate Units</button>
+
+    <h3>Result:</h3>
+    <pre id="result"></pre>
+
+    <hr>
+
+    <h3>Reset / Set Present Reading</h3>
+    <label for="resetReading">New Present Reading:</label>
+    <input type="number" id="resetReading" placeholder="e.g. 12345" />
+    <button onclick="resetReading()">Save Reading</button>
+    <div class="success-msg" id="resetMsg"></div>
+  </div>
+
+  <script>
+    // IndexedDB setup
+    let db;
+    const DB_NAME = "MeterDB";
+    const STORE_NAME = "ReadingStore";
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onerror = () => reject("DB open error");
+        request.onsuccess = () => resolve(request.result);
+        request.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          db.createObjectStore(STORE_NAME);
+        };
+      });
+    }
+
+    function getReading() {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get("previousReading");
+        req.onsuccess = () => resolve(req.result ?? null);
+        req.onerror = () => reject("Read error");
+      });
+    }
+
+    function saveReading(value) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.put(value, "previousReading");
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject("Write error");
+      });
+    }
+
+    async function calculateUnits() {
+      const current = parseInt(document.getElementById('currentReading').value);
+      const result = document.getElementById('result');
+      result.textContent = "";
+
+      if (isNaN(current) || current < 0) {
+        alert("Enter a valid current reading");
+        return;
+      }
+
+      const previous = await getReading();
+      if (previous === null) {
+        result.textContent = "No previous reading found. Please set it using the 'Reset Reading' section below.";
+        return;
+      }
+
+      const units = current - previous;
+
+      result.textContent = `Previous Reading: ${previous}
+Current Reading: ${current}
+Units Consumed: ${units}`;
+    }
+
+    async function resetReading() {
+      const newReading = parseInt(document.getElementById('resetReading').value);
+      const msgEl = document.getElementById('resetMsg');
+      msgEl.textContent = "";
+
+      if (isNaN(newReading) || newReading < 0) {
+        alert("Enter a valid reading to reset.");
+        return;
+      }
+
+      await saveReading(newReading);
+      msgEl.textContent = "Reading saved successfully.";
+    }
+
+    window.onload = async () => {
+      db = await openDB();
+    };
+  </script>
+</body>
+</html>
