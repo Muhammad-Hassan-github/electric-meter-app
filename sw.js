@@ -1,10 +1,12 @@
-const CACHE_NAME = "meter-app-v11";
+const CACHE_NAME = "meter-app-v12";
+const basePath = self.location.pathname.replace(/\/sw\.js$/, '/');
 const urlsToCache = [
-  "./",
-  "./index.html",
-  "./manifest.json",
-  "./icon-192.png",
-  "./icon-512.png"
+  `${basePath}`,              // base path, e.g. '/' or '/Rizwan Foods Corner/'
+  `${basePath}index.html`,
+  `${basePath}app.js`,
+  `${basePath}manifest.json`,
+  `${basePath}icon-192.png`,
+  `${basePath}icon-512.png`,
 ];
 
 self.addEventListener("install", (event) => {
