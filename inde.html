@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Electric Meter Units Calculator</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#3b82f6" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      padding: 2rem 1rem 1rem;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      align-items: flex-start;
+    }
+    .container {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      text-align: center;
+      box-sizing: border-box;
+    }
+    h1 {
+      margin-top: 0;
+      color: #333;
+    }
+    label {
+      font-weight: bold;
+      margin-top: 1rem;
+      display: block;
+      text-align: left;
+    }
+    input, button, a.view-bill-link {
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.6rem;
+      font-size: 1rem;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    input {
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      font-weight: 700;
+    }
+    button:hover {
+      background: #2563eb;
+    }
+    a.view-bill-link {
+      display: inline-block;
+      text-decoration: none;
+      text-align: center;
+      background-color: #10b981;
+      color: white;
+      font-weight: bold;
+      border: none;
+      margin-top: 1rem;
+      transition: background-color 0.3s ease;
+    }
+    a.view-bill-link:hover {
+      background-color: #059669;
+    }
+    pre {
+      background: #eef3fb;
+      padding: 1rem;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      margin-top: 1rem;
+      text-align: left;
+      font-size: 1rem;
+      color: #222;
+    }
+    .success-msg {
+      color: green;
+      font-weight: bold;
+      margin-top: 1rem;
+      min-height: 1.2em;
+      text-align: left;
+    }
+    .days-since {
+      font-size: 0.9rem;
+      color: #444;
+      text-align: left;
+      margin-top: 0.5rem;
+    }
+    hr {
+      margin: 2rem 0;
+      border: none;
+      border-top: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Units Calculator</h1>
+
+    <label for="currentReading">Enter Current Reading:</label>
+    <input type="number" id="currentReading" placeholder="e.g. 12345" />
+    <button onclick="calculateUnits()">Calculate Units</button>
+
+    <h3>Result:</h3>
+    <pre id="result"></pre>
+
+    <hr>
+
+    <h3>Reset Previous Reading</h3>
+    <div class="days-since" id="daysSinceReading"></div>
+    <label for="resetReading">New Bill Reading:</label>
+    <input type="number" id="resetReading" placeholder="e.g. 12345" />
+    <button onclick="resetReading()">Save Reading</button>
+    <a href="https://fesco-bill.pk/complete-bill/?refno=11132281778951" target="_blank" class="view-bill-link">
+      🔍 View FESCO Bill 1
+    </a>
+     <a href="https://fesco-bill.pk/complete-bill/?refno=11132281778958" target="_blank" class="view-bill-link">
+      🔍 View FESCO Bill 2
+    </a>
+    <div class="success-msg" id="resetMsg"></div>
+<button onclick="window.open('/api/fesco', '_blank')">Show My Bill</button>
+
+  </div>
+
+  <script>
+    let db;
+    const DB_NAME = "MeterDB";
+    const STORE_NAME = "ReadingStore";
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onerror = () => reject("DB open error");
+        request.onsuccess = () => resolve(request.result);
+        request.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME);
+          }
+        };
+      });
+    }
+
+    function getReading() {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get("previousReading");
+        req.onsuccess = () => resolve(req.result ?? null);
+        req.onerror = () => reject("Read error");
+      });
+    }
+
+    function saveReading(value) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.put(value, "previousReading");
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject("Write error");
+      });
+    }
+
+    function calculateDaysSince(timestamp) {
+      const past = new Date(timestamp);
+      const now = new Date();
+      const diff = Math.floor((now - past) / (1000 * 60 * 60 * 24));
+      return diff;
+    }
+
+    async function updateDaysDisplay() {
+      const el = document.getElementById("daysSinceReading");
+      const data = await getReading();
+      if (data?.timestamp) {
+        const days = calculateDaysSince(data.timestamp);
+        el.textContent = `📅 Previous reading saved ${days} day(s) ago.`;
+      } else {
+        el.textContent = `📅 No reading saved yet.`;
+      }
+    }
+
+    async function calculateUnits() {
+      const current = parseInt(document.getElementById('currentReading').value);
+      const result = document.getElementById('result');
+      result.textContent = "";
+
+      if (isNaN(current) || current < 0) {
+        alert("Enter a valid current reading");
+        return;
+      }
+
+      const data = await getReading();
+      if (!data || typeof data.reading !== 'number') {
+        result.textContent = "No previous reading found. Please set it using the 'Reset Reading' section below.";
+        return;
+      }
+
+      const units = current - data.reading;
+      if (units < 0) {
+        result.textContent = "Error: Current reading is less than previous reading.";
+        return;
+      }
+
+      result.textContent = `Previous Reading: ${data.reading}
+Current Reading: ${current}
+Units Consumed: ${units}`;
+    }
+
+    async function resetReading() {
+      const newReading = parseInt(document.getElementById('resetReading').value);
+      const msgEl = document.getElementById('resetMsg');
+      msgEl.textContent = "";
+
+      if (isNaN(newReading) || newReading < 0) {
+        alert("Enter a valid reading to reset.");
+        return;
+      }
+
+      const data = {
+        reading: newReading,
+        timestamp: new Date().toISOString()
+      };
+
+      await saveReading(data);
+      msgEl.textContent = "Reading saved successfully.";
+      updateDaysDisplay();
+    }
+
+    window.onload = async () => {
+      try {
+        db = await openDB();
+        updateDaysDisplay();
+      } catch (err) {
+        alert("Failed to open database: " + err);
+      }
+    };
+  </script>
+</body>
+</html>
