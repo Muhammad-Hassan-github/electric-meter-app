@@ -4,18 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Electric Meter Units Calculator</title>
-  <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#3b82f6" />
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #f0f4f8;
-      padding: 2rem 1rem 1rem;
+      padding: 2rem 1rem;
       margin: 0;
       display: flex;
       justify-content: center;
-      min-height: 100vh;
       align-items: flex-start;
+      min-height: 100vh;
     }
     .container {
       background: white;
@@ -37,7 +36,7 @@
       display: block;
       text-align: left;
     }
-    input, button, a.view-bill-link {
+    input, button {
       width: 100%;
       margin-top: 0.5rem;
       padding: 0.6rem;
@@ -58,20 +57,6 @@
     }
     button:hover {
       background: #2563eb;
-    }
-    a.view-bill-link {
-      display: inline-block;
-      text-decoration: none;
-      text-align: center;
-      background-color: #10b981;
-      color: white;
-      font-weight: bold;
-      border: none;
-      margin-top: 1rem;
-      transition: background-color 0.3s ease;
-    }
-    a.view-bill-link:hover {
-      background-color: #059669;
     }
     pre {
       background: #eef3fb;
@@ -121,19 +106,16 @@
     <label for="resetReading">New Bill Reading:</label>
     <input type="number" id="resetReading" placeholder="e.g. 12345" />
     <button onclick="resetReading()">Save Reading</button>
+    <div class="success-msg" id="resetMsg"></div>
+    <div class="success-msg" id="prevReadingDisplay"></div>
 
     <hr>
     <h3>FESCO Bills</h3>
-
-    <!-- Hidden Ref Numbers -->
     <span id="ref1" style="display:none;">11132281778951</span>
     <span id="ref2" style="display:none;">11132281778958</span>
 
-    <!-- Buttons -->
     <button onclick="copyAndOpenBill('ref1')">📋 Copy & Open Bill 1</button>
     <button onclick="copyAndOpenBill('ref2')">📋 Copy & Open Bill 2</button>
-
-    <div id="copyStatus" class="success-msg"></div>
   </div>
 
   <script>
@@ -178,18 +160,21 @@
     function calculateDaysSince(timestamp) {
       const past = new Date(timestamp);
       const now = new Date();
-      const diff = Math.floor((now - past) / (1000 * 60 * 60 * 24));
-      return diff;
+      return Math.floor((now - past) / (1000 * 60 * 60 * 24));
     }
 
     async function updateDaysDisplay() {
       const el = document.getElementById("daysSinceReading");
+      const prev = document.getElementById("prevReadingDisplay");
       const data = await getReading();
-      if (data?.timestamp) {
+
+      if (data?.timestamp && typeof data.reading === "number") {
         const days = calculateDaysSince(data.timestamp);
         el.textContent = `📅 Previous reading saved ${days} day(s) ago.`;
+        prev.textContent = `📌 Previous Reading: ${data.reading}`;
       } else {
         el.textContent = `📅 No reading saved yet.`;
+        prev.textContent = `📌 Previous Reading: 0`;
       }
     }
 
@@ -236,7 +221,8 @@ Units Consumed: ${units}`;
       };
 
       await saveReading(data);
-      msgEl.textContent = "Reading saved successfully.";
+      msgEl.textContent = "✅ Reading saved successfully.";
+      document.getElementById('resetReading').value = "";
       updateDaysDisplay();
     }
 
@@ -246,11 +232,10 @@ Units Consumed: ${units}`;
 
       navigator.clipboard.writeText(ref)
         .then(() => {
-          document.getElementById("copyStatus").textContent = `✅ Ref ${ref} copied. Opening bill...`;
           window.open(url, "_blank");
         })
         .catch(() => {
-          document.getElementById("copyStatus").textContent = "❌ Copy failed. Please try again.";
+          alert("❌ Copy failed. Please try again.");
         });
     }
 
