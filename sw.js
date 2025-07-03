@@ -1,4 +1,4 @@
-const CACHE_NAME = "meter-app-v14";
+const CACHE_NAME = "meter-app-v17";
 const basePath = self.location.pathname.replace(/\/sw\.js$/, '/');
 const urlsToCache = [
   `${basePath}`,              // base path, e.g. '/' or '/Rizwan Foods Corner/'
